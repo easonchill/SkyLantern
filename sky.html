@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>夜空祈福天燈</title>
+    <style>
+        :root {
+            --sky-bg: radial-gradient(circle at bottom, #1e272e 0%, #050505 100%);
+            --lantern-color: rgba(255, 107, 107, 0.85);
+            --glow-color: rgba(255, 230, 0, 0.6);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: var(--sky-bg);
+            font-family: "Microsoft JhengHei", sans-serif;
+        }
+
+        /* 天燈容器 - 動畫與定位 */
+        .lantern-wrapper {
+            position: absolute;
+            bottom: -280px;
+            width: 160px;
+            height: 250px;
+            pointer-events: none;
+            overflow: visible;
+        }
+        /* 天燈本體 - 台灣天燈 上寬下窄，用 polygon 避免 path 破圖 */
+        .lantern {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 160px;
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 32px;
+            font-weight: bold;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            letter-spacing: 8px;
+            padding: 20px 0;
+            pointer-events: none;
+            /* 台灣天燈 上寬下窄 - 百分比座標 */
+            clip-path: polygon(
+                3% 2%, 25% 0%, 50% 0%, 75% 0%, 97% 2%,
+                99% 12%, 99% 50%, 96% 92%, 68% 98%,
+                50% 99%, 32% 98%, 4% 92%, 1% 50%, 1% 12%
+            );
+            -webkit-clip-path: polygon(
+                3% 2%, 25% 0%, 50% 0%, 75% 0%, 97% 2%,
+                99% 12%, 99% 50%, 96% 92%, 68% 98%,
+                50% 99%, 32% 98%, 4% 92%, 1% 50%, 1% 12%
+            );
+            /* 紙質感 + 漸層 */
+            background: linear-gradient(160deg, 
+                var(--lantern-light) 0%, 
+                var(--lantern-main) 25% 75%, 
+                var(--lantern-dark) 100%);
+            box-shadow: 
+                inset 0 0 80px rgba(255, 255, 255, 0.12),
+                inset 0 -50px 70px var(--lantern-shadow);
+            filter: drop-shadow(0 0 35px var(--lantern-glow)) drop-shadow(0 0 60px var(--lantern-glow));
+            text-shadow: 0 0 25px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0,0,0,0.2);
+            transform: translateZ(0);
+            backface-visibility: hidden;
+        }
+        .lantern::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 20%;
+            right: 20%;
+            height: 8px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+            border-radius: 50%;
+        }
+        .lantern-logo-only .lantern-logo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: auto;
+            max-height: 120px;
+            object-fit: contain;
+            opacity: 0.95;
+            pointer-events: none;
+            z-index: 1;
+        }
+        /* 火焰 - 獨立元素避免被 clip-path 裁切 */
+        .lantern-flame {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 55px;
+            background: radial-gradient(ellipse 60% 100% at 50% 30%, 
+                #fffde7 0%, #fff9c4 15%, #ffeb3b 35%, #ffc107 55%, #ff9800 75%, #ff6f00 100%);
+            border-radius: 50% 50% 30% 30%;
+            filter: blur(4px);
+            animation: flicker 0.12s infinite alternate;
+            box-shadow: 
+                0 0 30px rgba(255, 235, 59, 0.9),
+                0 0 50px rgba(255, 193, 7, 0.6),
+                inset 0 -10px 20px rgba(255, 152, 0, 0.5);
+        }
+        .lantern-flame::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 25px;
+            background: radial-gradient(ellipse at center, #ffffff 0%, #fff9c4 50%, transparent 100%);
+            border-radius: 50%;
+            animation: flicker 0.08s infinite alternate reverse;
+        }
+
+
+        /* 動畫：上升、飄移、變小 - 飛散感（每顆用 CSS 變數隨機） */
+        @keyframes flyUp {
+            0% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            20% { transform: translate(var(--d1), -24vh) rotate(var(--r1)) scale(0.95); }
+            40% { transform: translate(var(--d2), -48vh) rotate(var(--r2)) scale(0.85); }
+            60% { transform: translate(var(--d3), -72vh) rotate(var(--r3)) scale(0.7); }
+            80% { transform: translate(var(--d4), -96vh) rotate(var(--r4)) scale(0.55); }
+            100% {
+                transform: translate(var(--d5), -120vh) rotate(var(--r5)) scale(0.4);
+                opacity: 0;
+            }
+        }
+
+        /* 動畫：火焰閃爍 */
+        @keyframes flicker {
+            from { opacity: 0.85; transform: translateX(-50%) scale(1); }
+            to { opacity: 1; transform: translateX(-50%) scale(1.15); }
+        }
+
+        /* 天燈顏色變體 */
+        .lantern[data-color="red"] {
+            --lantern-main: #e53935;
+            --lantern-light: #ff6f60;
+            --lantern-dark: #ab000d;
+            --lantern-shadow: rgba(180, 0, 0, 0.5);
+            --lantern-glow: rgba(255, 82, 82, 0.5);
+        }
+        .lantern[data-color="orange"] {
+            --lantern-main: #f57c00;
+            --lantern-light: #ffb74d;
+            --lantern-dark: #bb4d00;
+            --lantern-shadow: rgba(200, 80, 0, 0.5);
+            --lantern-glow: rgba(255, 152, 0, 0.5);
+        }
+        .lantern[data-color="gold"] {
+            --lantern-main: #f9a825;
+            --lantern-light: #ffd54f;
+            --lantern-dark: #c17900;
+            --lantern-shadow: rgba(180, 120, 0, 0.5);
+            --lantern-glow: rgba(255, 213, 79, 0.5);
+        }
+        .lantern[data-color="pink"] {
+            --lantern-main: #ec407a;
+            --lantern-light: #f48fb1;
+            --lantern-dark: #b4004e;
+            --lantern-shadow: rgba(200, 50, 100, 0.5);
+            --lantern-glow: rgba(244, 143, 177, 0.5);
+        }
+        .lantern[data-color="coral"] {
+            --lantern-main: #ff7043;
+            --lantern-light: #ffab91;
+            --lantern-dark: #c43e00;
+            --lantern-shadow: rgba(220, 60, 0, 0.5);
+            --lantern-glow: rgba(255, 112, 67, 0.5);
+        }
+        .lantern[data-color="amber"] {
+            --lantern-main: #ffb300;
+            --lantern-light: #ffca28;
+            --lantern-dark: #c68400;
+            --lantern-shadow: rgba(200, 140, 0, 0.5);
+            --lantern-glow: rgba(255, 193, 7, 0.5);
+        }
+
+        /* 背景星星 */
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: twinkle var(--t) infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <script>
+        // 初始化背景星星
+        function createStars() {
+            for (let i = 0; i < 150; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 2 + 'px';
+                star.style.width = size;
+                star.style.height = size;
+                star.style.left = Math.random() * 100 + 'vw';
+                star.style.top = Math.random() * 100 + 'vh';
+                star.style.setProperty('--t', (Math.random() * 3 + 2) + 's');
+                document.body.appendChild(star);
+            }
+        }
+
+        const LANTERN_COLORS = ['red', 'orange', 'gold', 'pink', 'coral', 'amber'];
+        let wishHistory = ['平安', '心想事成', '萬事如意'];
+
+        function getActiveLanternCount() {
+            return document.querySelectorAll('.lantern-wrapper').length;
+        }
+
+        function createLanternLogo(src, alt) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'lantern-wrapper';
+            const lantern = document.createElement('div');
+            lantern.className = 'lantern lantern-logo-only';
+            lantern.dataset.color = LANTERN_COLORS[Math.floor(Math.random() * LANTERN_COLORS.length)];
+            const logo = document.createElement('img');
+            logo.className = 'lantern-logo';
+            logo.src = src;
+            logo.alt = alt;
+            lantern.appendChild(logo);
+            const flame = document.createElement('div');
+            flame.className = 'lantern-flame';
+            wrapper.appendChild(lantern);
+            wrapper.appendChild(flame);
+            const startX = Math.random() * 85;
+            const duration = 18 + Math.random() * 12;
+            const rand = (min, max) => (Math.random() * (max - min) + min).toFixed(1);
+            for (let i = 1; i <= 5; i++) {
+                wrapper.style.setProperty(`--d${i}`, rand(-7, 7) + 'vw');
+                wrapper.style.setProperty(`--r${i}`, rand(-10, 10) + 'deg');
+            }
+            wrapper.style.left = startX + 'vw';
+            wrapper.style.animation = `flyUp ${duration}s linear forwards`;
+            document.body.appendChild(wrapper);
+            setTimeout(() => wrapper.remove(), duration * 1000);
+        }
+        function createLanternIBM() { createLanternLogo('IBM.png', 'IBM'); }
+        function createLanternEWC() { createLanternLogo('EWC.png', 'EWC'); }
+
+        function createLantern(wish, color) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'lantern-wrapper';
+            const lantern = document.createElement('div');
+            lantern.className = 'lantern';
+            lantern.dataset.color = color || LANTERN_COLORS[Math.floor(Math.random() * LANTERN_COLORS.length)];
+            const textSpan = document.createElement('span');
+            textSpan.className = 'lantern-text';
+            textSpan.innerText = wish;
+            lantern.appendChild(textSpan);
+            const len = wish.length;
+            const fontSize = Math.max(14, Math.min(32, Math.floor(140 / len) - 4));
+            const letterSpacing = len > 6 ? 4 : 8;
+            textSpan.style.fontSize = fontSize + 'px';
+            textSpan.style.letterSpacing = letterSpacing + 'px';
+            const flame = document.createElement('div');
+            flame.className = 'lantern-flame';
+            wrapper.appendChild(lantern);
+            wrapper.appendChild(flame);
+            const startX = Math.random() * 85;
+            const duration = 18 + Math.random() * 12;
+            const rand = (min, max) => (Math.random() * (max - min) + min).toFixed(1);
+            for (let i = 1; i <= 5; i++) {
+                wrapper.style.setProperty(`--d${i}`, rand(-7, 7) + 'vw');
+                wrapper.style.setProperty(`--r${i}`, rand(-10, 10) + 'deg');
+            }
+            wrapper.style.left = startX + 'vw';
+            wrapper.style.animation = `flyUp ${duration}s linear forwards`;
+            document.body.appendChild(wrapper);
+            setTimeout(() => wrapper.remove(), duration * 1000);
+        }
+
+        createStars();
+
+        // 每秒拉取 wish.csv 投放天燈
+        let processedCount = 0;
+        async function fetchAndLaunch() {
+            try {
+                const res = await fetch('wish.csv?t=' + Date.now());
+                const text = await res.text();
+                const lines = text.trim().split(/\r?\n/).filter(Boolean);
+                for (let i = processedCount; i < lines.length; i++) {
+                    const wish = lines[i].split(',')[0].trim() || '平安';
+                    launchWithWish(wish);
+                }
+                processedCount = lines.length;
+            } catch (e) {
+                console.warn('拉取 wish.csv 失敗:', e);
+            }
+        }
+        function launchWithWish(wish) {
+            if (!wish) return;
+            wishHistory.push(wish);
+            if (wishHistory.length > 50) wishHistory.shift();
+            createLantern(wish);
+        }
+
+        // 畫面太空時隨機投放已放過的願望 或 logo 天燈 (IBM/EWC)
+        const MIN_LANTERNS = 3;
+        function fillIfEmpty() {
+            if (getActiveLanternCount() < MIN_LANTERNS) {
+                if (Math.random() < 0.25) {
+                    Math.random() < 0.5 ? createLanternIBM() : createLanternEWC();
+                } else if (wishHistory.length > 0) {
+                    const wish = wishHistory[Math.floor(Math.random() * wishHistory.length)];
+                    createLantern(wish);
+                }
+            }
+        }
+
+        setInterval(fetchAndLaunch, 1000);
+        setInterval(fillIfEmpty, 2000);
+        setInterval(() => {
+            if (Math.random() < 0.2) Math.random() < 0.5 ? createLanternIBM() : createLanternEWC();
+        }, 8000);
+        fetchAndLaunch();
+        Math.random() < 0.5 ? createLanternIBM() : createLanternEWC(); // 開場放一顆 logo
+    </script>
+</body>
+</html>
